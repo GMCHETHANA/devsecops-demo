@@ -1,0 +1,30 @@
+---
+- name: Scan Docker image for vulnerabilities
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Ensure Trivy is installed
+      ansible.builtin.command: trivy --version
+      register: trivy_check
+      ignore_errors: yes
+
+    - name: Install Trivy if not installed
+      ansible.builtin.shell: |
+        curl -sL https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.68.2_Linux-64bit.tar.gz -o /tmp/trivy.tar.gz
+        tar -xzvf /tmp/trivy.tar.gz -C /tmp
+        sudo mv /tmp/trivy /usr/local/bin/trivy
+        sudo chmod +x /usr/local/bin/trivy
+      when: trivy_check.failed
+
+    - name: Scan Docker image
+      ansible.builtin.shell: trivy image -f table python:3.11
+      register: trivy_result
+
+    - name: Show Trivy scan results
+      ansible.builtin.debug:
+        var: trivy_result.stdout
+
+
+
